@@ -14,7 +14,7 @@ const SHA256 = require('crypto-js/sha256');
 
 // 07182021 SS - declare and initialize key as array
 const key = [];
-
+const pubKeyBal = {};
 
 // localhost can have cross origin errors
 // depending on the browser you use!
@@ -32,11 +32,19 @@ console.log("Available Accounts");
 console.log("------------------");
 
 let count = 0;
+let pubAddress = "";
 for (let acctAdd in balances){
 key[count] = ec.genKeyPair();
-//console.log(count + " key generated")
-console.log("(" + acctAdd + ") "  + key[count].getPublic().encode('hex') + " (" + balances[acctAdd] + ")" ) 
+pubAddress = key[count].getPublic().encode('hex').toString().slice(-40)
+console.log(pubAddress)
+//console.log("(" + acctAdd + ") "  + key[count].getPublic().encode('hex') + " (" + balances[acctAdd] + ")" ) 
+console.log("(" + acctAdd + ") "  + key[count].getPublic().encode('hex').toString().slice(-40) + " (" + balances[acctAdd] + ")" ) 
+pubKeyBal[pubAddress] = balances[acctAdd]
 count++
+}
+
+for (let pubKeyy in pubKeyBal) {
+console.log(pubKeyBal[pubKeyy])
 }
 
 console.log("Private Keys");
@@ -51,7 +59,9 @@ count++
 
 app.get('/balance/:address', (req, res) => {
   const {address} = req.params;
-  const balance = balances[address] || 0;
+  console.log("Address :" + address)
+  //const balance = balances[address] || 0;
+  const balance = pubKeyBal[address] || 0;
   res.send({ balance });
 });
 
@@ -60,10 +70,11 @@ app.post('/send', (req, res) => {
   //console.log('Private key received: ' + privateKey);
   //console.log('Sender: ' + sender);
   count = 0;
-  for (let acctAdd in balances){
+//for (let acctAdd in balances){
+for (let pubAdd in pubKeyBal){
 	//console.log('acctAdd: ' + acctAdd);
         //console.log(key[count].getPrivate().toString(16));
-	if(acctAdd == sender){
+	if(pubAdd == sender){
 		publicKey = key[count].getPublic().encode('hex')
 		//console.log('publicKey : ' + publicKey );
 	break;
@@ -73,11 +84,15 @@ app.post('/send', (req, res) => {
   }
   if (sv.signVerify(privateKey, publicKey)){
 	console.log("Message Verified");
-	balances[sender] -= amount;
-	balances[recipient] = (balances[recipient] || 0) + +amount;
-	res.send({ balance: balances[sender] , message: "Transaction authenticated successfully" });
+	//balances[sender] -= amount;
+	pubKeyBal[sender] -= amount;
+	//balances[recipient] = (balances[recipient] || 0) + +amount;
+	pubKeyBal[recipient] = (pubKeyBal[recipient] || 0) + +amount;
+	//res.send({ balance: balances[sender] , message: "Transaction authenticated successfully" });
+	res.send({ balance: pubKeyBal[sender] , message: "Transaction authenticated successfully" });
   }else {
-	res.send({ balance: balances[sender] , message: "Transaction authentication failed" });
+	//res.send({ balance: balances[sender] , message: "Transaction authentication failed" });
+	res.send({ balance: pubKeyBal[sender] , message: "Transaction authentication failed" });
 }    
 });
 
